@@ -26,22 +26,22 @@ public:
     :AudioFormatReaderSource (sourceReader,  deleteReaderWhenThisIsDeleted)
     {
         reader.	setNonOwned(sourceReader);
-        blockNumber=0;
+        
     }
     
     void getNextAudioBlock (const AudioSourceChannelInfo& info) override
     {
         if (info.numSamples > 0)
         {
+            blockSize= info.numSamples;
             if(reversed)
             {
-                const int64 start = info.numSamples*(blockNumber-1);
-            
+                const int64 start = nextPlayPos;
+                
                 reader->read (info.buffer, info.startSample,
                               info.numSamples, start, true, true);
                 info.buffer->reverse(info.startSample, info.numSamples);
-                blockNumber -= 1;
-                nextPlayPos=blockNumber*info.numSamples;
+                nextPlayPos-=info.numSamples;
             }
             else
             {
@@ -50,8 +50,8 @@ public:
                 reader->read (info.buffer, info.startSample,
                               info.numSamples, start, true, true);
                 nextPlayPos += info.numSamples;
-                blockNumber += 1;
-
+                
+                
             }
         }
         
@@ -63,17 +63,20 @@ public:
         if(reversed)
             reversed=false;
         else
+        {
+            nextPlayPos-=blockSize;
             reversed=true;
+        }
     }
     
-
+    
 private:
     //==============================================================================
     OptionalScopedPointer<AudioFormatReader> reader;
     
     int64 volatile nextPlayPos=0;
     bool volatile reversed=false;
-    int64 blockNumber;
+    int64 blockSize;
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ReversibleAudioFormatReaderSource)
     
